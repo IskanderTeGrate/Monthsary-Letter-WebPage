@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Monthsary Letter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Homemade+Apple&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #caf9fe;
+    --paper-shadow: #050109;
+    --ink: #12022c;
+    --ink-soft: #2e0579;
+    --rose: #5300da;
+    --rose-deep: #2a0055;
+    --envelope: #6d7be3;
+    --envelope-dark: #55279a;
+    --envelope-flap: #6653c5;
+    --gold: #63dc48;
+    --bg-1: #000000;
+    --bg-2: #04021d;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    min-height:100%;
+    background: radial-gradient(ellipse at 50% 20%, var(--bg-2) 0%, var(--bg-1) 55%, #391394 100%);
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+    overflow-x:hidden;
+  }
+  body{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 32px 16px;
+  }
+
+  .stage{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:520px;
+    perspective: 1400px;
+  }
+
+  /* ---------- Spinning background flowers ---------- */
+  .bg-flowers{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+  }
+  .bg-flowers svg{
+    position:absolute;
+    opacity:0.4;
+    animation: spin linear infinite;
+    transform-origin: center;
+  }
+  @keyframes spin{
+    from{ transform: rotate(0deg); }
+    to{ transform: rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .bg-flowers svg{ animation:none; }
+  }
+
+  /* ---------- Envelope ---------- */
+  .envelope-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .envelope-wrap.hidden{
+    opacity:0;
+    transform: translateY(-18px) scale(0.96);
+    pointer-events:none;
+    position:absolute;
+    inset:0;
+  }
+
+  .envelope-btn{
+    all:unset;
+    cursor:pointer;
+    position:relative;
+    width:min(88vw, 360px);
+    aspect-ratio: 3 / 2;
+  }
+  .envelope-btn:focus-visible .envelope-body{
+    outline: 3px solid var(--ink-soft);
+    outline-offset: 4px;
+  }
+
+  .envelope-body{
+    position:absolute;
+    inset:0;
+    background: var(--envelope);
+    border-radius: 6px;
+    box-shadow: 0 18px 40px -14px rgba(83, 64, 177, 0.45);
+    overflow:hidden;
+  }
+  .envelope-body::before{
+    /* bottom V shadow, suggests the folded pocket */
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:62%;
+    background: var(--envelope-dark);
+    clip-path: polygon(0% 100%, 50% 20%, 100% 100%);
+  }
+  .flap{
+    position:absolute;
+    top:0; left:0; right:0;
+    height:62%;
+    background: var(--envelope-flap);
+    clip-path: polygon(0% 0%, 100% 0%, 50% 82%);
+    transform-origin: top center;
+    transition: transform 0.7s cubic-bezier(.6,.05,.3,1);
+    z-index:3;
+  }
+  .envelope-btn.open .flap{
+    transform: rotateX(178deg);
+  }
+
+  .seal{
+    position:absolute;
+    left:50%; top: 34%;
+    width:46px; height:46px;
+    transform: translate(-50%,-50%);
+    background: radial-gradient(circle at 35% 30%, #6ec76e, var(--gold) 70%);
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.25) inset, 0 2px 4px rgba(0,0,0,0.3);
+    z-index:4;
+    transition: opacity 0.3s ease;
+  }
+  .envelope-btn.open .seal{ opacity:0; }
+  .seal svg{ width:20px; height:20px; fill:#d7d5f8; opacity:0.9; }
+
+  .letter-peek{
+    position:absolute;
+    left:8%; right:8%;
+    bottom:6%;
+    height:70%;
+    background: var(--paper);
+    border-radius: 3px 3px 0 0;
+    box-shadow: 0 -2px 6px rgba(0,0,0,0.08);
+    z-index:2;
+    transition: transform 0.7s cubic-bezier(.2,.8,.3,1) 0.15s;
+  }
+  .envelope-btn.open .letter-peek{
+    transform: translateY(-58%);
+  }
+
+  .prompt{
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+  }
+  .prompt em{ font-style:italic; }
+
+  /* ---------- Letter ---------- */
+  .letter-wrap{
+    opacity:0;
+    transform: translateY(14px);
+    transition: opacity 0.7s ease 0.35s, transform 0.7s ease 0.35s;
+  }
+  .letter-wrap.shown{
+    opacity:1;
+    transform:none;
+  }
+
+  .letter{
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 44px 36px 40px;
+    box-shadow: 0 24px 60px -20px rgba(59, 36, 90, 0.5), 0 2px 0 var(--paper-shadow) inset;
+    position:relative;
+  }
+  .letter::after{
+    /* subtle fold line */
+    content:"";
+    position:absolute;
+    left:8%; right:8%; top:33%;
+    height:1px;
+    background: linear-gradient(90deg, transparent, rgba(90,36,54,0.12), transparent);
+  }
+
+  .headline{
+    font-family:'Homemade Apple', cursive;
+    font-weight:400;
+    font-size: clamp(2rem, 6vw, 2.6rem);
+    color: var(--ink);
+    margin: 0 0 4px;
+    line-height:1.15;
+  }
+
+  .counter{
+    display:inline-block;
+    margin: 6px 0 22px;
+    padding: 6px 16px;
+    background: rgba(31, 12, 88, 0.1);
+    border: 1px solid rgba(61, 86, 214, 0.35);
+    border-radius: 999px;
+    font-size: 1rem;
+    color: var(--rose-deep);
+    letter-spacing: 0.01em;
+  }
+
+  .body-text p{
+    font-size: 1.22rem;
+    line-height: 1.65;
+    margin: 0 0 16px;
+    color: var(--ink);
+    max-width: 62ch;
+  }
+
+  .reasons{
+    margin: 22px 0 26px;
+    padding: 0;
+    list-style:none;
+  }
+  .reasons li{
+    position:relative;
+    padding-left: 26px;
+    margin-bottom: 10px;
+    font-size: 1.15rem;
+    line-height:1.5;
+  }
+  .reasons li::before{
+    content:"♥";
+    position:absolute;
+    left:0; top:1px;
+    color: var(--rose);
+    font-size: 0.95rem;
+  }
+
+  .signature{
+    margin-top: 28px;
+    font-family:'Homemade Apple', cursive;
+    font-size: 1.9rem;
+    color: var(--ink);
+    line-height:1.3;
+  }
+
+  .replay{
+    all:unset;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top: 30px;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    border-bottom: 1px solid rgba(77, 51, 246, 0.4);
+    padding-bottom: 2px;
+  }
+  .replay:hover{ color: var(--rose-deep); border-color: var(--rose-deep); }
+  .replay:focus-visible{ outline: 2px solid var(--ink-soft); outline-offset: 3px; }
+
+  /* ---------- Photo frames ---------- */
+  .photos{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    gap: 18px 22px;
+    margin: 8px 0 28px;
+    padding-top: 6px;
+  }
+  .polaroid{
+    background:#b1d8e8;
+    padding: 10px 10px 16px;
+    width: 148px;
+    box-shadow: 0 10px 22px -10px rgba(39, 4, 108, 0.4);
+    border: 1px solid rgba(13, 0, 28, 0.06);
+  }
+  .polaroid:nth-child(odd){ transform: rotate(-4deg); }
+  .polaroid:nth-child(even){ transform: rotate(3deg); }
+  .polaroid:hover{ transform: rotate(0deg) translateY(-3px); transition: transform 0.25s ease; }
+
+  .polaroid .frame{
+    position:relative;
+    width:100%;
+    aspect-ratio: 1 / 1;
+    background: #b1d8e8;
+    overflow:hidden;
+    cursor:pointer;
+  }
+  .polaroid img{
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .polaroid .placeholder{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    color: var(--ink-soft);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.92rem;
+    text-align:center;
+    padding: 8px;
+    background:
+      repeating-linear-gradient(45deg, rgba(14, 1, 41, 0.04) 0 6px, transparent 6px 12px);
+  }
+  .polaroid .placeholder svg{ width:22px; height:22px; opacity:0.6; }
+  .polaroid .cap{
+    display:block;
+    text-align:center;
+    margin-top: 10px;
+    font-family:'Homemade Apple', cursive;
+    font-size: 1.15rem;
+    color: var(--ink-soft);
+  }
+  .polaroid input[type="file"]{ display:none; }
+  .polaroid .frame:focus-visible{ outline: 2px solid var(--ink-soft); outline-offset: 3px; }
+
+  @media (max-width: 420px){
+    .polaroid{ width: 42vw; max-width:150px; }
+  }
+
+  /* floating hearts, single orchestrated burst on open */
+  .hearts{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+  }
+  .hearts span{
+    position:absolute;
+    bottom:-40px;
+    font-size: 1.3rem;
+    color: var(--rose);
+    opacity:0.85;
+    animation: rise 3.6s ease-in forwards;
+  }
+  @keyframes rise{
+    to{ transform: translateY(-110vh) translateX(var(--drift,0)) rotate(var(--rot,0deg)); opacity:0; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .flap, .letter-peek, .letter-wrap, .envelope-wrap{ transition:none !important; }
+    .hearts{ display:none; }
+  }
+
+  @media (max-width: 420px){
+    .letter{ padding: 34px 22px 30px; }
+  }
+
+  /* ---------- Music player ---------- */
+  .player{
+    position:fixed;
+    left:50%;
+    bottom:18px;
+    transform: translateX(-50%);
+    z-index: 40;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background: var(--paper);
+    border-radius: 999px;
+    padding: 8px 18px 8px 8px;
+    box-shadow: 0 14px 30px -12px rgba(46, 36, 90, 0.5);
+    max-width: 92vw;
+  }
+
+  .vinyl{
+    width:40px; height:40px;
+    border-radius:50%;
+    background: radial-gradient(circle at center, var(--ink) 0 5px, #1b102a 6px 8px, #362265 9px 100%);
+    flex: none;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition: transform 0.2s ease;
+  }
+  .vinyl::before{
+    content:"";
+    width:6px; height:6px;
+    border-radius:50%;
+    background: var(--paper);
+  }
+  .vinyl.spinning{ animation: spin 3.2s linear infinite; }
+  @media (prefers-reduced-motion: reduce){
+    .vinyl.spinning{ animation:none; }
+  }
+
+  .player-info{
+    display:flex;
+    flex-direction:column;
+    min-width: 0;
+    max-width: 150px;
+  }
+  .player-title{
+    font-family:'Cormorant Garamond', serif;
+    font-weight:600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .player-artist{
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .player-btn{
+    all:unset;
+    cursor:pointer;
+    width:34px; height:34px;
+    border-radius:50%;
+    background: var(--rose);
+    color:#b6c6fb;
+    display:flex; align-items:center; justify-content:center;
+    flex:none;
+  }
+  .player-btn:focus-visible{ outline: 2px solid var(--ink-soft); outline-offset: 2px; }
+  .player-btn svg{ width:15px; height:15px; }
+
+  .player-seek{
+    -webkit-appearance:none;
+    appearance:none;
+    width: 70px;
+    height:3px;
+    border-radius:2px;
+    background: rgba(59, 36, 90, 0.18);
+    outline:none;
+  }
+  .player-seek::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:10px; height:10px;
+    border-radius:50%;
+    background: var(--rose-deep);
+    cursor:pointer;
+  }
+  .player-seek::-moz-range-thumb{
+    width:10px; height:10px;
+    border:none;
+    border-radius:50%;
+    background: var(--rose-deep);
+    cursor:pointer;
+  }
+
+  .player input[type="file"]{ display:none; }
+
+  @media (max-width: 420px){
+    .player-info{ max-width: 96px; }
+    .player-seek{ width:44px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-flowers" aria-hidden="true">
+  <svg viewBox="0 0 100 100" style="width:130px; height:130px; top:-30px; left:-30px; animation-duration:38s;">
+    <g fill="#C97B84">
+      <ellipse cx="50" cy="24" rx="12" ry="24"/>
+      <ellipse cx="50" cy="24" rx="12" ry="24" transform="rotate(60 50 50)"/>
+      <ellipse cx="50" cy="24" rx="12" ry="24" transform="rotate(120 50 50)"/>
+      <ellipse cx="50" cy="24" rx="12" ry="24" transform="rotate(180 50 50)"/>
+      <ellipse cx="50" cy="24" rx="12" ry="24" transform="rotate(240 50 50)"/>
+      <ellipse cx="50" cy="24" rx="12" ry="24" transform="rotate(300 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="9" fill="#B08D57"/>
+  </svg>
+
+  <svg viewBox="0 0 100 100" style="width:90px; height:90px; top:12%; right:-20px; animation-duration:26s; animation-direction:reverse;">
+    <g fill="#E7C2CB">
+      <ellipse cx="50" cy="26" rx="10" ry="22"/>
+      <ellipse cx="50" cy="26" rx="10" ry="22" transform="rotate(72 50 50)"/>
+      <ellipse cx="50" cy="26" rx="10" ry="22" transform="rotate(144 50 50)"/>
+      <ellipse cx="50" cy="26" rx="10" ry="22" transform="rotate(216 50 50)"/>
+      <ellipse cx="50" cy="26" rx="10" ry="22" transform="rotate(288 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="7" fill="#B25D68"/>
+  </svg>
+
+  <svg viewBox="0 0 100 100" style="width:150px; height:150px; bottom:-40px; left:6%; animation-duration:46s;">
+    <g fill="#D9A6AC">
+      <ellipse cx="50" cy="22" rx="13" ry="26"/>
+      <ellipse cx="50" cy="22" rx="13" ry="26" transform="rotate(60 50 50)"/>
+      <ellipse cx="50" cy="22" rx="13" ry="26" transform="rotate(120 50 50)"/>
+      <ellipse cx="50" cy="22" rx="13" ry="26" transform="rotate(180 50 50)"/>
+      <ellipse cx="50" cy="22" rx="13" ry="26" transform="rotate(240 50 50)"/>
+      <ellipse cx="50" cy="22" rx="13" ry="26" transform="rotate(300 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="10" fill="#B08D57"/>
+  </svg>
+
+  <svg viewBox="0 0 100 100" style="width:70px; height:70px; bottom:8%; right:8%; animation-duration:20s; animation-direction:reverse;">
+    <g fill="#C97B84">
+      <ellipse cx="50" cy="28" rx="9" ry="20"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(72 50 50)"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(144 50 50)"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(216 50 50)"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(288 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="6" fill="#7A3B4D"/>
+  </svg>
+
+  <svg viewBox="0 0 100 100" style="width:60px; height:60px; top:52%; left:4%; animation-duration:32s;">
+    <g fill="#E7C2CB">
+      <ellipse cx="50" cy="28" rx="9" ry="20"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(90 50 50)"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(180 50 50)"/>
+      <ellipse cx="50" cy="28" rx="9" ry="20" transform="rotate(270 50 50)"/>
+    </g>
+    <circle cx="50" cy="50" r="6" fill="#B25D68"/>
+  </svg>
+</div>
+
+<div class="stage">
+
+  <div class="envelope-wrap" id="envelopeWrap">
+    <button class="envelope-btn" id="envelopeBtn" aria-label="Open your monthsary letter">
+      <div class="envelope-body">
+        <div class="letter-peek"></div>
+        <div class="flap"></div>
+        <div class="seal" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21s-8.5-5.2-11-10.2C-0.7 6.6 2 3 5.6 3 8 3 10 4.4 12 7c2-2.6 4-4 6.4-4C22 3 24.7 6.6 23 10.8 20.5 15.8 12 21 12 21z"/></svg>
+        </div>
+      </div>
+    </button>
+    <p class="prompt"><em>Tap the envelope, love.</em></p>
+  </div>
+
+  <div class="letter-wrap" id="letterWrap">
+    <div class="letter">
+      <h1 class="headline" id="headline"></h1>
+      <div class="counter" id="counter"></div>
+      <div class="photos" id="photos"></div>
+      <div class="body-text" id="bodyText"></div>
+      <ul class="reasons" id="reasons"></ul>
+      <div class="signature" id="signature"></div>
+      <button class="replay" id="replayBtn">seal it back up</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="hearts" id="hearts" aria-hidden="true"></div>
+
+<div class="player">
+  <div class="vinyl" id="vinylBtn" role="button" tabindex="0" aria-label="Play or pause the song"></div>
+  <div class="player-info">
+    <span class="player-title" id="playerTitle"></span>
+    <span class="player-artist" id="playerArtist"></span>
+  </div>
+  <button class="player-btn" id="playBtn" aria-label="Play">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  </button>
+  <input type="range" class="player-seek" id="seek" min="0" max="100" value="0">
+  <input type="file" id="trackInput" accept="audio/*">
+</div>
+
+<script>
+  /* ============================================================
+     EDIT ME — everything about your letter lives here.
+     ============================================================ */
+  const CONFIG = {
+    // Whoever this letter is from and to
+    fromName: "Dylan (your tiny little twunk)",
+    toName: "Kyve (my husband)",
+
+    // The date you got together, as YYYY-MM-DD — the counter below
+    // is calculated from this automatically.
+    startDate: "2026-02-19",
+
+    greeting: "My dearest {toName},",
+
+    // Each string becomes its own paragraph.
+    message: [
+      "Happy Monthsary baby ko!!! It's already been 7 months of us being together, and in these months I have been the happiest person alive, and I hope you feel the same way.",
+      "Our moments together are my most prized — ones that weren't planned, just chilling with you and sleeping — feels the utmost best, just because you were in them.",
+      "So, here is my simple gift for you my baby. I hope you like it, for you my love, for our monthsary, and for what lies beyond and forever."
+    ],
+
+    reasons: [
+      "The way you always make me laugh, make everything fun, and ragebait me.",
+      "How you try to understand my interests.",
+      "How understanding, loving, and caring you are.",
+      "The fact that you are such an awesome, cool, smart, and so damn hot!!!"
+    ],
+
+    signature: "Still yours forever and after,\n{fromName}",
+
+    // One entry per photo frame. Leave "src" empty and just click the
+    // frame in the letter to upload a picture from your device — it's
+    // saved in this browser so it's still there next time you open the
+    // page. Or paste a base64 image directly into "src" if you'd rather
+    // bake it into the file itself.
+    photos: [
+      { src: "", caption: "us" },
+      { src: "", caption: "us" }
+    ],
+
+    // The little music player at the bottom. Tap the vinyl icon once to
+    // pick an audio file from your device (only works if you have your
+    // own copy of the track — nothing is bundled here).
+    songTitle: "Last Night on Earth",
+    songArtist: "Green Day"
+  };
+  /* ============================================================ */
+
+  function fill(str){
+    return str.replaceAll("{toName}", CONFIG.toName).replaceAll("{fromName}", CONFIG.fromName);
+  }
+
+  function monthsAndDays(startISO){
+    const start = new Date(startISO + "T00:00:00");
+    const now = new Date();
+    let months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    let days;
+    const anchor = new Date(start);
+    anchor.setMonth(anchor.getMonth() + months);
+    if (anchor > now){
+      months -= 1;
+      anchor.setMonth(anchor.getMonth() - 1);
+    }
+    days = Math.floor((now - anchor) / 86400000);
+    return { months, days };
+  }
+
+  function counterText(){
+    const { months, days } = monthsAndDays(CONFIG.startDate);
+    const m = months < 0 ? 0 : months;
+    const parts = [];
+    parts.push(m === 1 ? "1 month" : `${m} months`);
+    if (days > 0) parts.push(days === 1 ? "1 day" : `${days} days`);
+    return parts.join(", ") + " together";
+  }
+
+  function renderLetter(){
+    document.getElementById('headline').textContent = fill(CONFIG.greeting);
+    document.getElementById('counter').textContent = counterText();
+
+    const bodyEl = document.getElementById('bodyText');
+    bodyEl.innerHTML = "";
+    CONFIG.message.forEach(p => {
+      const el = document.createElement('p');
+      el.textContent = fill(p);
+      bodyEl.appendChild(el);
+    });
+
+    const reasonsEl = document.getElementById('reasons');
+    reasonsEl.innerHTML = "";
+    CONFIG.reasons.forEach(r => {
+      const li = document.createElement('li');
+      li.textContent = fill(r);
+      reasonsEl.appendChild(li);
+    });
+
+    document.getElementById('signature').innerHTML =
+      fill(CONFIG.signature).split("\n").join("<br>");
+
+    renderPhotos();
+  }
+
+  /* ---- Photo frames: click to upload, remembered per browser ---- */
+  const PHOTO_KEY_PREFIX = "monthsary-photo-";
+
+  function readStoredPhoto(index){
+    try{
+      return localStorage.getItem(PHOTO_KEY_PREFIX + index);
+    }catch(e){
+      return null;
+    }
+  }
+
+  function storePhoto(index, dataUrl){
+    try{
+      localStorage.setItem(PHOTO_KEY_PREFIX + index, dataUrl);
+    }catch(e){
+      // storage unavailable (private browsing, quota, etc.) — photo still
+      // shows for this session, it just won't be remembered next visit
+    }
+  }
+
+  function renderPhotos(){
+    const wrap = document.getElementById('photos');
+    wrap.innerHTML = "";
+
+    CONFIG.photos.forEach((photo, i) => {
+      const stored = readStoredPhoto(i);
+      const src = stored || photo.src || "";
+
+      const card = document.createElement('div');
+      card.className = 'polaroid';
+
+      const frame = document.createElement('div');
+      frame.className = 'frame';
+      frame.tabIndex = 0;
+      frame.setAttribute('role', 'button');
+      frame.setAttribute('aria-label', src ? 'Change this photo' : 'Add a photo');
+
+      if (src){
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = fill(photo.caption || "");
+        frame.appendChild(img);
+      } else {
+        const ph = document.createElement('div');
+        ph.className = 'placeholder';
+        ph.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5.5-5.5L9 17"/></svg><span>add a photo</span>';
+        frame.appendChild(ph);
+      }
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          storePhoto(i, reader.result);
+          renderPhotos();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      const open = () => input.click();
+      frame.addEventListener('click', open);
+      frame.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(); }
+      });
+
+      const cap = document.createElement('span');
+      cap.className = 'cap';
+      cap.textContent = fill(photo.caption || "");
+
+      card.appendChild(frame);
+      card.appendChild(input);
+      if (photo.caption) card.appendChild(cap);
+      wrap.appendChild(card);
+    });
+  }
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function launchHearts(){
+    if (reduceMotion) return;
+    const layer = document.getElementById('hearts');
+    const count = 14;
+    for (let i = 0; i < count; i++){
+      const s = document.createElement('span');
+      s.textContent = "♥";
+      const left = Math.random() * 100;
+      const drift = (Math.random() * 120 - 60) + "px";
+      const rot = (Math.random() * 60 - 30) + "deg";
+      const delay = Math.random() * 0.6;
+      const size = 0.9 + Math.random() * 0.9;
+      s.style.left = left + "vw";
+      s.style.setProperty('--drift', drift);
+      s.style.setProperty('--rot', rot);
+      s.style.animationDelay = delay + "s";
+      s.style.fontSize = size + "rem";
+      layer.appendChild(s);
+      setTimeout(() => s.remove(), 4400);
+    }
+  }
+
+  const envelopeBtn = document.getElementById('envelopeBtn');
+  const envelopeWrap = document.getElementById('envelopeWrap');
+  const letterWrap = document.getElementById('letterWrap');
+  const replayBtn = document.getElementById('replayBtn');
+
+  function openLetter(){
+    envelopeBtn.classList.add('open');
+    launchHearts();
+    setTimeout(() => {
+      envelopeWrap.classList.add('hidden');
+      letterWrap.classList.add('shown');
+    }, reduceMotion ? 0 : 650);
+  }
+
+  function closeLetter(){
+    letterWrap.classList.remove('shown');
+    envelopeWrap.classList.remove('hidden');
+    envelopeBtn.classList.remove('open');
+  }
+
+  envelopeBtn.addEventListener('click', openLetter);
+  replayBtn.addEventListener('click', closeLetter);
+
+  /* ---- Music player ---- */
+  function initPlayer(){
+    document.getElementById('playerTitle').textContent = CONFIG.songTitle;
+    document.getElementById('playerArtist').textContent = CONFIG.songArtist;
+
+    const audio = new Audio();
+    const vinyl = document.getElementById('vinylBtn');
+    const playBtn = document.getElementById('playBtn');
+    const seek = document.getElementById('seek');
+    const trackInput = document.getElementById('trackInput');
+
+    const playIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    const pauseIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+
+    function togglePlay(){
+      if (!audio.src){
+        trackInput.click();
+        return;
+      }
+      if (audio.paused){
+        audio.play();
+      } else {
+        audio.pause();
+      }
+    }
+
+    audio.addEventListener('play', () => {
+      vinyl.classList.add('spinning');
+      playBtn.innerHTML = pauseIcon;
+      playBtn.setAttribute('aria-label', 'Pause');
+    });
+    audio.addEventListener('pause', () => {
+      vinyl.classList.remove('spinning');
+      playBtn.innerHTML = playIcon;
+      playBtn.setAttribute('aria-label', 'Play');
+    });
+    audio.addEventListener('timeupdate', () => {
+      if (audio.duration){
+        seek.value = (audio.currentTime / audio.duration) * 100;
+      }
+    });
+    audio.addEventListener('ended', () => {
+      seek.value = 0;
+    });
+
+    seek.addEventListener('input', () => {
+      if (audio.duration){
+        audio.currentTime = (seek.value / 100) * audio.duration;
+      }
+    });
+
+    trackInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      audio.src = URL.createObjectURL(file);
+      audio.play();
+    });
+
+    vinyl.addEventListener('click', togglePlay);
+    vinyl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); togglePlay(); }
+    });
+    playBtn.addEventListener('click', togglePlay);
+  }
+
+  initPlayer();
+  renderLetter();
+</script>
+</body>
+</html>
